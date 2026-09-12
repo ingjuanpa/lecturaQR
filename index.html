@@ -2,75 +2,51 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Don Platico - PDF a QR V10.1</title>
+<title>Don Platico - V10.2 NIT</title>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
-body{font-family:Arial;background:#FBEBCB;padding:15px}
-.card{max-width:520px;margin:auto;background:#fff;padding:22px;border-radius:14px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.2)}
-.header-nit{background:#181A2E;color:#fff;padding:10px;border-radius:8px;margin-bottom:15px;font-weight:900;letter-spacing:1px}
-.header-nit span{color:#FFA23A}
-button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:900;width:100%;margin-top:12px;cursor:pointer}
+body{font-family:Arial;background:#FBEBCB;padding:0;margin:0}
+.topbar{background:#181A2E;color:white;text-align:center;padding:14px;font-weight:900;font-size:16px;position:sticky;top:0;z-index:10}
+.topbar span{color:#FFA23A}
+.card{max-width:520px;margin:15px auto;background:#fff;padding:22px;border-radius:14px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.2)}
+button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:900;width:100%;margin-top:12px}
 input[type=text]{width:100%;padding:10px;border:2px solid #B4332A;border-radius:8px;margin-top:10px;box-sizing:border-box}
-#qr{display:flex;justify-content:center;margin-top:20px;padding:10px;background:white}
-#pdfview{width:100%;height:450px;border:1px solid #ccc;margin-top:15px;display:none}
-#status{margin-top:12px;font-size:13px;text-align:left;word-break:break-all}
+#qr{display:flex;justify-content:center;margin-top:20px}
+#pdfview{width:100%;height:400px;display:none;margin-top:10px}
 .opt{border:2px dashed #ccc;padding:12px;border-radius:8px;margin-top:15px;text-align:left}
 </style>
 </head>
 <body>
+<div class="topbar">NIT: <span>34.994.561</span> - RESTAURANTE DON PLATICO - V10.2</div>
 <div class="card">
-<div class="header-nit">NIT: <span>34.994.561</span> - RESTAURANTE DON PLATICO</div>
-
-<h2 style="margin:5px 0">🧾 PDF Intacto → QR</h2>
-<p style="font-size:12px;margin-top:0">QR que abre el PDF original con logo</p>
-
+<h2 style="margin:0">🧾 PDF → QR</h2>
 <div class="opt">
-<b>OPCIÓN 1 - AUTOMÁTICA (Rápida):</b><br>
-<input type="file" id="pdfFile" accept="application/pdf" style="width:100%;margin-top:8px">
-<button id="btnPreview">VER PDF Y GENERAR QR LOCAL</button>
+<input type="file" id="pdfFile" accept="application/pdf" style="width:100%">
 <iframe id="pdfview"></iframe>
 </div>
-
 <div class="opt" style="border-color:#B4332A">
-<b>OPCIÓN 2 - DEFINITIVA (100% estable para clientes):</b><br>
-<small>1. Sube el PDF a tu Google Drive<br>2. Click derecho > Compartir > Cualquier persona con el link<br>3. Copia el link y pégalo aquí:</small>
-<input type="text" id="driveLink" placeholder="Pega aquí el link de Drive https://drive.google.com/...">
-<button id="btnDrive" style="background:#B4332A;color:white">GENERAR QR DE ESE LINK</button>
+<small>Pega link de Drive del PDF:</small>
+<input type="text" id="driveLink" placeholder="https://drive.google.com/...">
+<button id="btnDrive" style="background:#B4332A;color:white">GENERAR QR</button>
 </div>
-
 <div id="qr"></div>
-<div id="status"></div>
-<button id="printBtn" style="display:none;background:#333;color:white">IMPRIMIR QR</button>
+<div id="status" style="font-size:12px;word-break:break-all;text-align:left;margin-top:10px"></div>
 </div>
-
 <script>
 let pdfURL=null;
-document.getElementById('pdfFile').addEventListener('change', e=>{
-  const f=e.target.files[0]; if(!f) return;
-  pdfURL=URL.createObjectURL(f);
-  const iframe=document.getElementById('pdfview');
-  iframe.style.display='block'; iframe.src=pdfURL;
-  document.getElementById('status').innerHTML=`PDF cargado: ${f.name}. Pulsa VER PDF`;
+document.getElementById('pdfFile').addEventListener('change',e=>{
+  const f=e.target.files[0]; pdfURL=URL.createObjectURL(f);
+  const v=document.getElementById('pdfview'); v.style.display='block'; v.src=pdfURL;
 });
-document.getElementById('btnPreview').onclick=()=>{
-  if(!pdfURL){ alert('Primero selecciona un PDF'); return; }
-  document.getElementById('qr').innerHTML='';
-  new QRCode(document.getElementById('qr'),{text:pdfURL,width:300,height:300});
-  document.getElementById('status').innerHTML=`⚠️ Este QR es de VISTA PREVIA local. Solo funciona en esta PC. Para cliente usa OPCIÓN 2.`;
-};
 document.getElementById('btnDrive').onclick=()=>{
   let link=document.getElementById('driveLink').value.trim();
-  if(!link){ alert('Pega el link de Drive'); return; }
-  if(link.includes('drive.google.com')){
-    const idMatch=link.match(/\/d\/([^\/]+)/) || link.match(/id=([^&]+)/);
-    if(idMatch){ link=`https://drive.google.com/file/d/${idMatch[1]}/view`; }
-  }
+  if(!link){alert('Pega link');return;}
+  const m=link.match(/\/d\/([^\/]+)/)||link.match(/id=([^&]+)/);
+  if(m) link=`https://drive.google.com/file/d/${m[1]}/view`;
   document.getElementById('qr').innerHTML='';
-  new QRCode(document.getElementById('qr'),{text:link,width:300,height:300,correctLevel:QRCode.CorrectLevel.M});
-  document.getElementById('status').innerHTML=`✅ <b>QR DEFINITIVO LISTO</b><br>Link: <a href="${link}" target="_blank">${link}</a><br><br>Imprime este QR.`;
-  document.getElementById('printBtn').style.display='block';
+  new QRCode(document.getElementById('qr'),{text:link,width:280,height:280});
+  document.getElementById('status').innerHTML=`✅ QR listo: <a href="${link}" target="_blank">${link}</a>`;
 };
-document.getElementById('printBtn').onclick=()=>window.print();
 </script>
 </body>
 </html>
