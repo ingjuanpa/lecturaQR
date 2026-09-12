@@ -2,108 +2,89 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Don Platico - V11 PDF con NIT</title>
+<title>Don Platico - V11.1</title>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <style>
-body{font-family:Arial;background:#FBEBCB;margin:0;padding:0}
-.topbar{background:#181A2E;color:white;text-align:center;padding:14px;font-weight:900;position:sticky;top:0;z-index:10}
+body{margin:0;background:#FBEBCB;font-family:Arial}
+.topbar{background:#181A2E;color:#fff;text-align:center;padding:12px;font-weight:900}
 .topbar span{color:#FFA23A}
-.card{max-width:700px;margin:15px auto;background:#fff;padding:18px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.2);text-align:center}
-button{padding:13px;width:100%;border:none;border-radius:8px;font-weight:900;margin-top:8px;cursor:pointer}
-.btn-dark{background:#181A2E;color:#FFA23A}
-.btn-red{background:#B4332A;color:white}
-.btn-green{background:#0A7A42;color:white}
-#pdfview{width:100%;height:500px;border:2px solid #B4332A;border-radius:8px;margin-top:10px;display:none}
-#qr{display:flex;justify-content:center;margin-top:15px}
-input{width:100%;padding:10px;box-sizing:border-box;border:2px dashed #B4332A;border-radius:8px;margin-top:8px}
-.opt{border:2px dashed #aaa;padding:12px;border-radius:8px;margin-top:12px;text-align:left}
-#status{font-size:12px;text-align:left;word-break:break-all;margin-top:10px}
+.card{max-width:720px;margin:12px auto;background:#fff;padding:16px;border-radius:10px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.2)}
+button{width:100%;padding:12px;border:none;border-radius:8px;font-weight:900;margin-top:8px;cursor:pointer}
+.btn-dark{background:#181A2E;color:#FFA23A}.btn-green{background:#0A7A42;color:#fff}.btn-red{background:#B4332A;color:#fff}
+#pdfview{width:100%;height:520px;border:2px solid #333;display:none;margin-top:10px}
+input{width:100%;padding:9px;box-sizing:border-box;border:2px dashed #B4332A;border-radius:6px;margin-top:8px}
+.opt{border:2px dashed #bbb;padding:10px;border-radius:8px;margin-top:10px;text-align:left}
+#qr{display:flex;justify-content:center;margin-top:12px}
 </style>
 </head>
 <body>
-<div class="topbar">NIT: <span>34.994.561</span> - RESTAURANTE DON PLATICO - V11</div>
+<div class="topbar">NIT: <span>34.994.561</span> - DON PLATICO - V11.1 CORREGIDO</div>
 <div class="card">
-<h3 style="margin:0">🧾 PDF con encabezado NIT → QR</h3>
-
 <div class="opt">
-<b>1. Selecciona PDF de Odoo:</b>
+<b>1. Selecciona PDF de Odoo (como el 266-1-000569):</b>
 <input type="file" id="pdfFile" accept="application/pdf">
-<button id="btnAddHeader" class="btn-dark" style="display:none">2. AGREGAR ENCABEZADO NIT AL PDF</button>
+<button id="btnAdd" class="btn-dark" style="display:none">AGREGAR NIT: 34.994.561 AL PDF</button>
 <iframe id="pdfview"></iframe>
-<div id="info" style="font-size:11px;color:#555;margin-top:5px"></div>
-<button id="btnDownload" class="btn-green" style="display:none">⬇️ DESCARGAR PDF CON NIT PARA SUBIR A DRIVE</button>
+<button id="btnDown" class="btn-green" style="display:none">⬇️ DESCARGAR PDF YA CON NIT</button>
+<div id="info" style="font-size:11px;margin-top:6px;text-align:left"></div>
 </div>
-
 <div class="opt" style="border-color:#B4332A">
-<b>3. Súbelo a Drive y genera QR:</b>
-<input type="text" id="driveLink" placeholder="Pega aquí el link de Drive del PDF ya con NIT">
-<button id="btnDrive" class="btn-red">GENERAR QR DEFINITIVO</button>
+<b>2. Sube ESE PDF descargado a Drive:</b>
+<input type="text" id="driveLink" placeholder="Pega aquí el link del NUEVO PDF con NIT">
+<button id="btnQR" class="btn-red">GENERAR QR NUEVO</button>
 </div>
-
 <div id="qr"></div>
-<div id="status"></div>
+<div id="status" style="font-size:11px;word-break:break-all;text-align:left;margin-top:8px"></div>
 </div>
-
 <script>
-let originalFile=null, modifiedPdfBytes=null, modifiedUrl=null;
-const pdfView=document.getElementById('pdfview');
-
-document.getElementById('pdfFile').addEventListener('change', e=>{
-  originalFile=e.target.files[0]; if(!originalFile) return;
-  const url=URL.createObjectURL(originalFile);
-  pdfView.style.display='block'; pdfView.src=url;
-  document.getElementById('btnAddHeader').style.display='block';
-  document.getElementById('info').innerHTML=`PDF cargado: ${originalFile.name} - Ahora dale a AGREGAR ENCABEZADO`;
+let origFile=null, modBytes=null, modUrl=null;
+const view=document.getElementById('pdfview');
+document.getElementById('pdfFile').addEventListener('change',e=>{
+  origFile=e.target.files[0]; if(!origFile) return;
+  view.style.display='block'; view.src=URL.createObjectURL(origFile);
+  document.getElementById('btnAdd').style.display='block';
+  document.getElementById('info').innerHTML='PDF original cargado. Pulsa AGREGAR NIT';
 });
-
-document.getElementById('btnAddHeader').onclick=async()=>{
-  const btn=document.getElementById('btnAddHeader');
-  btn.textContent='AGREGANDO NIT...'; btn.disabled=true;
+document.getElementById('btnAdd').onclick=async()=>{
+  const btn=document.getElementById('btnAdd'); btn.textContent='PROCESANDO...'; btn.disabled=true;
   try{
-    const arrayBuffer=await originalFile.arrayBuffer();
-    const pdfDoc=await PDFLib.PDFDocument.load(arrayBuffer);
-    const pages=pdfDoc.getPages();
+    const buf=await origFile.arrayBuffer();
+    const pdfDoc=await PDFLib.PDFDocument.load(buf);
     const font=await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
-
-    pages.forEach(page=>{
-      const {width}=page.getSize();
+    const font2=await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+    pdfDoc.getPages().forEach((page,i)=>{
+      const {width,height}=page.getSize();
+      // Fondo blanco para tapar cabecera vieja de Odoo
+      page.drawRectangle({x:0,y:height-60,width:width,height:60,color:PDFLib.rgb(1,1,1)});
+      // NIT grande
       page.drawText('NIT: 34.994.561 - RESTAURANTE DON PLATICO', {
-        x: 30, y: page.getHeight()-18,
-        size: 10, font: font, color: PDFLib.rgb(0.71,0.20,0.16)
+        x:30, y:height-35, size:12, font:font, color:PDFLib.rgb(0.18,0.18,0.18)
       });
-      page.drawLine({
-        start:{x:30,y:page.getHeight()-22}, end:{x:width-30,y:page.getHeight()-22},
-        thickness:0.8, color:PDFLib.rgb(0.71,0.20,0.16)
+      page.drawText('Recibo oficial - Cartagena', {
+        x:30, y:height-48, size:8, font:font2, color:PDFLib.rgb(0.4,0.4,0.4)
       });
     });
-    modifiedPdfBytes=await pdfDoc.save();
-    const blob=new Blob([modifiedPdfBytes],{type:'application/pdf'});
-    if(modifiedUrl) URL.revokeObjectURL(modifiedUrl);
-    modifiedUrl=URL.createObjectURL(blob);
-    pdfView.src=modifiedUrl;
-    document.getElementById('info').innerHTML=`✅ <b>PDF MODIFICADO con encabezado NIT arriba</b><br>Ya ves la vista previa con el NIT. Ahora descárgalo y súbelo a Drive.`;
-    document.getElementById('btnDownload').style.display='block';
-    btn.textContent='ENCABEZADO AGREGADO';
-  }catch(err){ alert('Error: '+err.message); btn.disabled=false; }
+    modBytes=await pdfDoc.save();
+    const blob=new Blob([modBytes],{type:'application/pdf'});
+    if(modUrl) URL.revokeObjectURL(modUrl);
+    modUrl=URL.createObjectURL(blob);
+    view.src=modUrl;
+    document.getElementById('info').innerHTML='✅ <b>¡LISTO! Ya ves el NIT arriba en la vista previa.</b><br>Si lo ves arriba, ahora descarga y súbelo a Drive.';
+    document.getElementById('btnDown').style.display='block';
+    btn.textContent='NIT AGREGADO ✔️';
+  }catch(e){alert(e.message); btn.disabled=false; btn.textContent='AGREGAR NIT: 34.994.561 AL PDF';}
 };
-
-document.getElementById('btnDownload').onclick=()=>{
-  if(!modifiedPdfBytes) return;
-  const a=document.createElement('a');
-  a.href=modifiedUrl; a.download=`Recibo_NIT_34.994.561_${originalFile.name}`;
-  a.click();
-  document.getElementById('info').innerHTML+=`<br><br>⬇️ PDF descargado. Ahora súbelo a <a href="https://drive.google.com" target="_blank">Drive</a> y pega el link abajo.`;
+document.getElementById('btnDown').onclick=()=>{
+  const a=document.createElement('a'); a.href=modUrl; a.download=`CON-NIT_${origFile.name}`; a.click();
+  document.getElementById('info').innerHTML+='<br><br>⬇️ Descargado como CON-NIT_...pdf<br><b>IMPORTANTE:</b> Sube ESE archivo nuevo a Drive, NO el viejo.';
 };
-
-document.getElementById('btnDrive').onclick=()=>{
-  let link=document.getElementById('driveLink').value.trim();
-  if(!link){alert('Pega link de Drive');return;}
+document.getElementById('btnQR').onclick=()=>{
+  let link=document.getElementById('driveLink').value.trim(); if(!link){alert('Pega link');return;}
   const m=link.match(/\/d\/([^\/]+)/)||link.match(/id=([^&]+)/);
   if(m) link=`https://drive.google.com/file/d/${m[1]}/view`;
-  document.getElementById('qr').innerHTML='';
-  new QRCode(document.getElementById('qr'),{text:link,width:300,height:300});
-  document.getElementById('status').innerHTML=`✅ QR LISTO - Este PDF YA lleva el encabezado NIT: 34.994.561<br><a href="${link}" target="_blank">${link}</a>`;
+  document.getElementById('qr').innerHTML=''; new QRCode(document.getElementById('qr'),{text:link,width:300,height:300});
+  document.getElementById('status').innerHTML=`✅ QR NUEVO con NIT: <a href="${link}" target="_blank">${link}</a><br><br>Escanea este QR nuevo, ahora sí verás el NIT arriba como en la vista previa.`;
 };
 </script>
 </body>
