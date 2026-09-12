@@ -2,53 +2,74 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Don Platico - PDF Intacto V9</title>
+<title>Don Platico - PDF a QR V10</title>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<style>body{font-family:Arial;background:#FBEBCB;padding:15px}.card{max-width:520px;margin:auto;background:#fff;padding:22px;border-radius:14px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.2)} button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:900;width:100%;margin-top:12px;cursor:pointer} #qr{display:flex;justify-content:center;margin-top:20px;padding:10px} #pdfview{width:100%;height:450px;border:1px solid #ccc;margin-top:15px;display:none} #status{margin-top:12px;font-size:13px;word-break:break-all;text-align:left}</style>
+<style>
+body{font-family:Arial;background:#FBEBCB;padding:15px}
+.card{max-width:520px;margin:auto;background:#fff;padding:22px;border-radius:14px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.2)}
+button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:900;width:100%;margin-top:12px;cursor:pointer}
+input[type=text]{width:100%;padding:10px;border:2px solid #B4332A;border-radius:8px;margin-top:10px;box-sizing:border-box}
+#qr{display:flex;justify-content:center;margin-top:20px;padding:10px;background:white}
+#pdfview{width:100%;height:450px;border:1px solid #ccc;margin-top:15px;display:none}
+#status{margin-top:12px;font-size:13px;text-align:left;word-break:break-all}
+.opt{border:2px dashed #ccc;padding:12px;border-radius:8px;margin-top:15px;text-align:left}
+</style>
 </head>
 <body>
 <div class="card">
 <h2>🧾 Don Platico - PDF Intacto → QR</h2>
-<p style="font-size:12px">El QR abrirá el PDF original con logo</p>
-<input type="file" id="pdfFile" accept="application/pdf" style="width:100%;padding:10px;border:2px dashed #B4332A;border-radius:8px">
-<button id="uploadBtn" style="display:none">SUBIR PDF ORIGINAL Y GENERAR QR</button>
-<div id="qr"></div>
-<div id="status"></div>
+<p style="font-size:12px">QR que abre el PDF original con logo</p>
+
+<div class="opt">
+<b>OPCIÓN 1 - AUTOMÁTICA (Rápida):</b><br>
+<input type="file" id="pdfFile" accept="application/pdf" style="width:100%;margin-top:8px">
+<button id="btnPreview">VER PDF Y GENERAR QR LOCAL</button>
 <iframe id="pdfview"></iframe>
 </div>
+
+<div class="opt" style="border-color:#B4332A">
+<b>OPCIÓN 2 - DEFINITIVA (100% estable para clientes):</b><br>
+<small>1. Sube el PDF a tu Google Drive<br>2. Click derecho > Compartir > Cualquier persona con el link<br>3. Copia el link y pégalo aquí:</small>
+<input type="text" id="driveLink" placeholder="Pega aquí el link de Drive https://drive.google.com/...">
+<button id="btnDrive" style="background:#B4332A;color:white">GENERAR QR DE ESE LINK</button>
+</div>
+
+<div id="qr"></div>
+<div id="status"></div>
+<button id="printBtn" style="display:none;background:#333;color:white">IMPRIMIR QR</button>
+</div>
+
 <script>
-let fileBlob=null, pdfURL=null;
+let pdfURL=null;
 document.getElementById('pdfFile').addEventListener('change', e=>{
-  fileBlob=e.target.files[0]; if(!fileBlob) return;
-  pdfURL=URL.createObjectURL(fileBlob);
-  document.getElementById('pdfview').style.display='block';
-  document.getElementById('pdfview').src=pdfURL;
-  document.getElementById('uploadBtn').style.display='block';
-  document.getElementById('status').innerHTML=`PDF: ${fileBlob.name} (${(fileBlob.size/1024).toFixed(1)} KB) - Listo para subir`;
+  const f=e.target.files[0]; if(!f) return;
+  pdfURL=URL.createObjectURL(f);
+  const iframe=document.getElementById('pdfview');
+  iframe.style.display='block'; iframe.src=pdfURL;
+  document.getElementById('status').innerHTML=`PDF cargado: ${f.name}. Pulsa VER PDF`;
 });
 
-document.getElementById('uploadBtn').onclick=async()=>{
-  const btn=document.getElementById('uploadBtn'), status=document.getElementById('status');
-  btn.textContent="SUBIENDO PDF ORIGINAL..."; btn.disabled=true;
-  status.innerHTML="Subiendo PDF intacto a la nube...";
-  try{
-    const form=new FormData();
-    form.append('file', fileBlob);
-    // file.io SI permite CORS desde GitHub Pages
-    const res=await fetch('https://file.io/?expires=1w', {method:'POST', body:form});
-    const data=await res.json();
-    if(!data.success) throw new Error(data.message||'Fallo subida');
-    const link=data.link;
-    document.getElementById('qr').innerHTML='';
-    new QRCode(document.getElementById('qr'),{text:link,width:300,height:300,correctLevel:QRCode.CorrectLevel.M});
-    status.innerHTML=`✅ <b>QR LISTO - PDF INTACTO</b><br><br>Link: <a href="${link}" target="_blank">${link}</a><br><br>1. Imprime este QR<br>2. Cliente escanea<br>3. Ve el PDF tal cual con logo DON PLATICO<br><br><small>El link dura 7 días. Para permanente necesitamos Firebase.</small>`;
-    btn.textContent="QR GENERADO - LISTO PARA IMPRIMIR";
-  }catch(err){
-    console.error(err);
-    status.innerHTML=`❌ Error: ${err.message}<br><br>SOLUCIÓN RÁPIDA: GitHub Pages no deja subir a servidores gratis.<br><br><b>Para que te funcione 100% estable necesitas 2 opciones:</b><br>1. Te creo una versión con Firebase Storage (gratis y permanente)<br>2. O usas un link de Drive: subes el PDF a tu Google Drive, copias link y lo pegas para generar QR.<br><br>Dime cuál prefieres y te lo dejo listo en 2 min.`;
-    btn.disabled=false; btn.textContent="REINTENTAR";
-  }
+document.getElementById('btnPreview').onclick=()=>{
+  if(!pdfURL){ alert('Primero selecciona un PDF'); return; }
+  document.getElementById('qr').innerHTML='';
+  new QRCode(document.getElementById('qr'),{text:pdfURL,width:300,height:300});
+  document.getElementById('status').innerHTML=`⚠️ Este QR es de VISTA PREVIA local. Solo funciona en esta PC.<br><br>Para que el CLIENTE lo vea, usa la OPCIÓN 2 con Drive (es la definitiva).`;
 };
+
+document.getElementById('btnDrive').onclick=()=>{
+  let link=document.getElementById('driveLink').value.trim();
+  if(!link){ alert('Pega el link de Drive'); return; }
+  // Convertir link de Drive a link directo de visualización
+  if(link.includes('drive.google.com')){
+    const idMatch=link.match(/\/d\/([^\/]+)/) || link.match(/id=([^&]+)/);
+    if(idMatch){ link=`https://drive.google.com/file/d/${idMatch[1]}/view`; }
+  }
+  document.getElementById('qr').innerHTML='';
+  new QRCode(document.getElementById('qr'),{text:link,width:300,height:300,correctLevel:QRCode.CorrectLevel.M});
+  document.getElementById('status').innerHTML=`✅ <b>QR DEFINITIVO LISTO</b><br><br>Link: <a href="${link}" target="_blank">${link}</a><br><br>Este QR SÍ lo puede escanear el cliente en otra mesa y verá el PDF intacto con logo Don Platico.<br><br>Imprime este QR y pégalo en la cuenta.`;
+  document.getElementById('printBtn').style.display='block';
+};
+document.getElementById('printBtn').onclick=()=>window.print();
 </script>
 </body>
 </html>
