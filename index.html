@@ -3,39 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Don Platico - Cuenta a QR</title>
+<title>Don Platico - Cuenta a QR V6</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<style>body{font-family:Arial;background:#FBEBCB;padding:15px}.card{max-width:500px;margin:auto;background:#fff;padding:20px;border-radius:12px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.15)}button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:800;cursor:pointer;width:100%;margin-top:12px}#qr{display:flex;justify-content:center;margin-top:20px}textarea{width:100%;height:140px;margin-top:12px;font-size:13px;text-align:left}</style>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>body{font-family:Arial;background:#FBEBCB;padding:15px}.card{max-width:520px;margin:auto;background:#fff;padding:22px;border-radius:12px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.15)}button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:800;cursor:pointer;width:100%;margin-top:12px}#qr{display:flex;justify-content:center;margin-top:20px}textarea{width:100%;height:160px;margin-top:12px;font-size:13px;text-align:left;padding:8px}#status{margin-top:12px;font-size:13px;word-break:break-word}</style>
 </head>
 <body>
 <div class="card">
 <h2>🧾 Cuenta PDF → QR</h2>
-<p style="font-size:13px">Sube el PDF de la cuenta y genera el QR para el cliente</p>
-<input type="file" id="pdfFile" accept="application/pdf" style="width:100%;padding:10px;border:2px dashed #B4332A;border-radius:8px">
+<p style="font-size:13px">Sube el PDF de la cuenta y genera el QR</p>
+<input type="file" id="pdfFile" accept="application/pdf">
 <button id="genBtn" style="display:none">GENERAR QR DE ESTA CUENTA</button>
-<textarea id="txtPreview" placeholder="Aquí se verá el contenido de la cuenta..." style="display:none"></textarea>
+<textarea id="txtPreview" placeholder="Aquí se verá el contenido de la cuenta..."></textarea>
 <div id="qr"></div>
-<div id="status" style="margin-top:10px;font-size:13px"></div>
+<div id="status"></div>
 </div>
 <script>
-const pdfjsLib=window['pdfjs-dist/build/pdf'];
-pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-let fullText="";
+const pdfjsLib = window['pdfjs-dist/build/pdf'];
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let fullText = "";
 
 document.getElementById('pdfFile').addEventListener('change', async e=>{
-  const buf=await e.target.files[0].arrayBuffer();
-  const doc=await pdfjsLib.getDocument({data: buf}).promise;
-  const page=await doc.getPage(1);
-  const txt=await page.getTextContent();
-  fullText=txt.items.map(i=>i.str).join('\n');
-  document.getElementById('txtPreview').style.display='block';
-  document.getElementById('txtPreview').value=fullText;
-  document.getElementById('genBtn').style.display='block';
-  document.getElementById('status').innerHTML=`Cuenta leída: ${fullText.length} caracteres`;
+  try{
+    const file = e.target.files[0];
+    if(!file) return;
+    document.getElementById('status').innerHTML = "Leyendo PDF...";
+    const buf = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({data: buf}).promise;
+    let txtAll = "";
+    for(let i=1; i<=doc.numPages; i++){
+      const page = await doc.getPage(i);
+      const txt = await page.getTextContent();
+      const pageText = txt.items.map(o=>o.str).join(' ');
+      txtAll += pageText + "\n";
+    }
+    fullText = txtAll.trim();
+    console.log("TEXTO:", fullText);
+    document.getElementById('txtPreview').value = fullText;
+
+    if(fullText.length < 5){
+      document.getElementById('status').innerHTML = `<b style="color:red">Este PDF es una foto escaneada, no tiene texto.<br>Sube un PDF generado por el sistema de facturación, no una foto.</b>`;
+      document.getElementById('genBtn').style.display='none';
+      return;
+    }
+    document.getElementById('genBtn').style.display='block';
+    document.getElementById('status').innerHTML = `<span style="color:green">Texto leído: ${fullText.length} caracteres. Listo para generar QR.</span>`;
+  }catch(err){
+    document.getElementById('status').innerHTML = `<b style="color:red">Error leyendo PDF: ${err.message}</b>`;
+    console.error(err);
+  }
 });
 
 document.getElementById('genBtn').onclick=()=>{
+  if(!fullText){ alert('No hay texto'); return; }
   document.getElementById('qr').innerHTML='';
   new QRCode(document.getElementById('qr'),{
     text: fullText,
@@ -43,7 +63,7 @@ document.getElementById('genBtn').onclick=()=>{
     height: 280,
     correctLevel: QRCode.CorrectLevel.L
   });
-  document.getElementById('status').innerHTML=`<b style="color:green">¡QR listo! El cliente al escanear verá:<br><br>${fullText.substring(0,200)}...</b>`;
+  document.getElementById('status').innerHTML = `<b style="color:green">¡QR listo! El cliente verá:</b><br><div style="text-align:left;background:#f5f5f5;padding:8px;margin-top:8px;border-radius:6px">${fullText.substring(0,500)}</div>`;
 };
 </script>
 </body>
