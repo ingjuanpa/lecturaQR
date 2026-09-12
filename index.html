@@ -3,70 +3,82 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Don Platico - Cuenta a QR V7</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<title>Don Platico - PDF a QR</title>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<style>
-body{font-family:Arial;background:#FBEBCB;padding:15px;margin:0}
-.card{max-width:540px;margin:auto;background:#fff;padding:22px;border-radius:14px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.2)}
-button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:900;cursor:pointer;width:100%;margin-top:12px;font-size:14px}
-#qr{display:flex;justify-content:center;margin-top:20px;background:white;padding:10px;border-radius:8px}
-textarea{width:100%;height:180px;margin-top:12px;font-size:12px;text-align:left;padding:8px;box-sizing:border-box}
-#status{margin-top:12px;font-size:13px;text-align:left;white-space:pre-wrap}
-</style>
+<style>body{font-family:Arial;background:#FBEBCB;padding:15px}.card{max-width:520px;margin:auto;background:#fff;padding:22px;border-radius:14px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.2)} button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:900;width:100%;margin-top:12px} #qr{display:flex;justify-content:center;margin-top:20px;padding:10px} #pdfview{width:100%;height:500px;border:1px solid #ccc;margin-top:15px;display:none} #status{margin-top:12px;font-size:13px;word-break:break-all}</style>
 </head>
 <body>
 <div class="card">
-<h2>🧾 Don Platico - Cuenta a QR</h2>
-<p style="font-size:12px">Sube el PDF del recibo de Odoo POS (como el 6556)</p>
+<h2>🧾 Don Platico - PDF Intacto → QR</h2>
+<p style="font-size:12px">El QR abrirá el PDF tal cual, con logo y todo</p>
 <input type="file" id="pdfFile" accept="application/pdf" style="width:100%;padding:10px;border:2px dashed #B4332A;border-radius:8px">
-<button id="genBtn" style="display:none">GENERAR QR DE ESTA CUENTA</button>
-<textarea id="txtPreview" placeholder="Aquí aparecerá: Mojarra frita, Subtotal, Total..."></textarea>
+<button id="uploadBtn" style="display:none">SUBIR PDF Y GENERAR QR</button>
 <div id="qr"></div>
 <div id="status"></div>
-<button id="printBtn" style="display:none;background:#B4332A;color:white">IMPRIMIR QR PARA MESA</button>
+<iframe id="pdfview"></iframe>
+<button id="printBtn" style="display:none;background:#B4332A;color:white">IMPRIMIR QR</button>
 </div>
 <script>
-const pdfjsLib = window['pdfjs-dist/build/pdf'];
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-let fullText = "";
+let pdfURL = null;
+let fileBlob = null;
 
-document.getElementById('pdfFile').addEventListener('change', async e=>{
-  const file = e.target.files[0]; if(!file) return;
-  document.getElementById('status').textContent = "Leyendo recibo...";
-  const buf = await file.arrayBuffer();
-  const doc = await pdfjsLib.getDocument({data: buf}).promise;
-  let all = "";
-  for(let i=1;i<=doc.numPages;i++){
-    const page = await doc.getPage(i);
-    const content = await page.getTextContent();
-    // Junta respetando saltos
-    let lastY = null;
-    content.items.forEach(item=>{
-      if(lastY!== item.transform[5]){ all += "\n"; lastY = item.transform[5]; }
-      all += item.str + " ";
-    });
-  }
-  fullText = `RESTAURANTE DON PLATICO\n${all}\n\nCr 3 # 47-64 Cartagena\n`.replace(/\s+\n/g,'\n').trim();
-  document.getElementById('txtPreview').value = fullText;
-  document.getElementById('genBtn').style.display='block';
-  document.getElementById('status').innerHTML = `<span style="color:green">Recibo leído: ${fullText.length} caracteres</span>`;
+document.getElementById('pdfFile').addEventListener('change', e=>{
+  fileBlob = e.target.files[0];
+  if(!fileBlob) return;
+  pdfURL = URL.createObjectURL(fileBlob);
+  document.getElementById('pdfview').style.display='block';
+  document.getElementById('pdfview').src = pdfURL;
+  document.getElementById('uploadBtn').style.display='block';
+  document.getElementById('status').innerHTML = `PDF cargado: ${fileBlob.name} - Vista previa abajo`;
 });
 
-document.getElementById('genBtn').onclick=()=>{
-  if(fullText.length < 10){ alert('Sube un PDF válido'); return; }
-  document.getElementById('qr').innerHTML='';
-  new QRCode(document.getElementById('qr'),{
-    text: fullText,
-    width: 300,
-    height: 300,
-    correctLevel: QRCode.CorrectLevel.M
-  });
-  document.getElementById('status').innerHTML = `✅ QR generado. Cuando el cliente escanee verá:\n${fullText}`;
-  document.getElementById('printBtn').style.display='block';
-};
+document.getElementById('uploadBtn').onclick = async ()=>{
+  const btn = document.getElementById('uploadBtn');
+  btn.textContent = "SUBIENDO...";
+  btn.disabled = true;
 
-document.getElementById('printBtn').onclick=()=>{ window.print(); };
+  try{
+    // Subimos el PDF tal cual a un servidor temporal
+    const form = new FormData();
+    form.append('file', fileBlob);
+
+    // usamos catbox que guarda el archivo intacto
+    const res = await fetch('https://catbox.moe/user/api.php', {
+      method: 'POST',
+      body: form
+    });
+    const link = await res.text();
+
+    if(!link.startsWith('http')){
+      throw new Error('Error subiendo');
+    }
+
+    document.getElementById('qr').innerHTML='';
+    new QRCode(document.getElementById('qr'),{
+      text: link,
+      width: 300,
+      height: 300,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    document.getElementById('status').innerHTML = `✅ <b>QR LISTO</b><br><br>Link del PDF original:<br><a href="${link}" target="_blank">${link}</a><br><br>El cliente al escanear verá el PDF tal cual con logo y todo.`;
+    document.getElementById('printBtn').style.display='block';
+    btn.textContent = "QR GENERADO";
+
+  }catch(err){
+    // Si falla catbox, hacemos QR con el archivo local (solo funciona en tu PC pero te muestra la idea)
+    document.getElementById('qr').innerHTML='';
+    new QRCode(document.getElementById('qr'),{
+      text: pdfURL,
+      width: 300,
+      height: 300
+    });
+    document.getElementById('status').innerHTML = `⚠️ No se pudo subir a internet (prueba en otra red).<br>Por ahora generé un QR de vista previa local.<br>Para que el cliente lo vea, necesitamos subirlo.<br>Error: ${err.message}`;
+    btn.disabled = false;
+    btn.textContent = "REINTENTAR SUBIR Y GENERAR QR";
+  }
+};
+document.getElementById('printBtn').onclick=()=>window.print();
 </script>
 </body>
 </html>
