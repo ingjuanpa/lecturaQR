@@ -2,51 +2,72 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Don Platico - V10.2 NIT</title>
+<title>Don Platico - V10.3 NIT + Preview</title>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
 body{font-family:Arial;background:#FBEBCB;padding:0;margin:0}
-.topbar{background:#181A2E;color:white;text-align:center;padding:14px;font-weight:900;font-size:16px;position:sticky;top:0;z-index:10}
+.topbar{background:#181A2E;color:white;text-align:center;padding:14px;font-weight:900;font-size:16px;position:sticky;top:0;z-index:100}
 .topbar span{color:#FFA23A}
-.card{max-width:520px;margin:15px auto;background:#fff;padding:22px;border-radius:14px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.2)}
-button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:900;width:100%;margin-top:12px}
-input[type=text]{width:100%;padding:10px;border:2px solid #B4332A;border-radius:8px;margin-top:10px;box-sizing:border-box}
-#qr{display:flex;justify-content:center;margin-top:20px}
-#pdfview{width:100%;height:400px;display:none;margin-top:10px}
-.opt{border:2px dashed #ccc;padding:12px;border-radius:8px;margin-top:15px;text-align:left}
+.card{max-width:650px;margin:15px auto;background:#fff;padding:20px;border-radius:14px;box-shadow:0 4px 15px rgba(0,0,0,.2);text-align:center}
+button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:900;width:100%;margin-top:10px;cursor:pointer}
+.btn-red{background:#B4332A;color:white}
+#pdfview{width:100%;height:550px;border:2px solid #B4332A;border-radius:8px;margin-top:12px;display:none}
+#qr{display:flex;justify-content:center;margin-top:15px;background:white;padding:10px}
+input[type=text],input[type=file]{width:100%;padding:10px;border:2px dashed #B4332A;border-radius:8px;box-sizing:border-box;margin-top:8px}
+.opt{border:2px dashed #aaa;padding:12px;border-radius:8px;margin-top:12px;text-align:left}
+#status{font-size:12px;word-break:break-all;text-align:left;margin-top:10px}
 </style>
 </head>
 <body>
-<div class="topbar">NIT: <span>34.994.561</span> - RESTAURANTE DON PLATICO - V10.2</div>
+<div class="topbar">NIT: <span>34.994.561</span> - RESTAURANTE DON PLATICO - V10.3</div>
 <div class="card">
-<h2 style="margin:0">🧾 PDF → QR</h2>
+<h2 style="margin:0">🧾 PDF Intacto → QR</h2>
+<p style="font-size:11px">Vista previa del PDF original con logo</p>
+
 <div class="opt">
-<input type="file" id="pdfFile" accept="application/pdf" style="width:100%">
+<b>1. Selecciona el PDF del recibo:</b>
+<input type="file" id="pdfFile" accept="application/pdf">
 <iframe id="pdfview"></iframe>
+<div id="previewInfo" style="font-size:11px;margin-top:5px;color:#666"></div>
 </div>
+
 <div class="opt" style="border-color:#B4332A">
-<small>Pega link de Drive del PDF:</small>
-<input type="text" id="driveLink" placeholder="https://drive.google.com/...">
-<button id="btnDrive" style="background:#B4332A;color:white">GENERAR QR</button>
+<b>2. Súbelo a Drive y genera el QR:</b>
+<small style="display:block;margin:5px 0">a) Abre <a href="https://drive.google.com" target="_blank">drive.google.com</a> y sube el PDF<br>b) Click derecho > Compartir > Cualquier persona<br>c) Copia el link y pégalo aquí:</small>
+<input type="text" id="driveLink" placeholder="https://drive.google.com/file/d/.../view">
+<button id="btnDrive" class="btn-red">GENERAR QR DEL PDF ORIGINAL</button>
 </div>
+
 <div id="qr"></div>
-<div id="status" style="font-size:12px;word-break:break-all;text-align:left;margin-top:10px"></div>
+<div id="status"></div>
+<button id="printBtn" style="display:none">IMPRIMIR QR</button>
 </div>
+
 <script>
 let pdfURL=null;
-document.getElementById('pdfFile').addEventListener('change',e=>{
-  const f=e.target.files[0]; pdfURL=URL.createObjectURL(f);
-  const v=document.getElementById('pdfview'); v.style.display='block'; v.src=pdfURL;
+const fileInput=document.getElementById('pdfFile');
+const iframe=document.getElementById('pdfview');
+const info=document.getElementById('previewInfo');
+
+fileInput.addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  pdfURL=URL.createObjectURL(f);
+  iframe.style.display='block';
+  iframe.src=pdfURL;
+  info.innerHTML=`✅ PDF cargado: <b>${f.name}</b> (${(f.size/1024).toFixed(0)} KB)<br>Abajo ves el PDF tal cual con el logo DON PLATICO.<br>Ahora súbelo a Drive para generar el QR definitivo.`;
 });
+
 document.getElementById('btnDrive').onclick=()=>{
   let link=document.getElementById('driveLink').value.trim();
-  if(!link){alert('Pega link');return;}
-  const m=link.match(/\/d\/([^\/]+)/)||link.match(/id=([^&]+)/);
+  if(!link){ alert('Pega primero el link de Drive'); return; }
+  const m=link.match(/\/d\/([^\/]+)/) || link.match(/id=([^&]+)/);
   if(m) link=`https://drive.google.com/file/d/${m[1]}/view`;
   document.getElementById('qr').innerHTML='';
-  new QRCode(document.getElementById('qr'),{text:link,width:280,height:280});
-  document.getElementById('status').innerHTML=`✅ QR listo: <a href="${link}" target="_blank">${link}</a>`;
+  new QRCode(document.getElementById('qr'),{text:link,width:300,height:300,correctLevel:QRCode.CorrectLevel.M});
+  document.getElementById('status').innerHTML=`✅ <b>QR LISTO - PDF INTACTO</b><br>Link: <a href="${link}" target="_blank">${link}</a><br><br>Este QR abre el PDF original. Imprimelo.`;
+  document.getElementById('printBtn').style.display='block';
 };
+document.getElementById('printBtn').onclick=()=>window.print();
 </script>
 </body>
 </html>
