@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>PDF a QR V4 - LINK</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>body{font-family:Arial;background:#FBEBCB;padding:15px}.card{max-width:850px;margin:auto;background:#fff;padding:20px;border-radius:12px}#pages{display:flex;flex-wrap:wrap;gap:10px}.page-thumb{border:2px solid #ccc;padding:5px;cursor:pointer;width:130px;text-align:center}.page-thumb.selected{border:3px solid #25D366;background:#D1FADF}button{background:#181A2E;color:#FFA23A;padding:12px;border:none;border-radius:8px;font-weight:800;cursor:pointer;margin:5px}input{width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;margin-top:8px}</style>
+</head>
+<body>
+<div class="card">
+<h2>📄 V4 - QR con LINK para ver PDF completo en celular</h2>
+<input type="file" id="pdfFile" accept="application/pdf">
+<div id="pages"></div>
+<div id="actions" style="display:none;text-align:center;margin-top:15px">
+<p>Hoja seleccionada: <b id="selText">-</b></p>
+<label>¿Donde subirás el PDF? (tu link base)</label>
+<input type="text" id="baseUrl" value="https://juanpabloduran.github.io/DonPlatico/pdfs/" placeholder="https://tu-dominio.com/pdfs/">
+<button id="genBtn">Generar PDF + QR con LINK</button>
+</div>
+<div style="text-align:center"><div id="qr" style="display:flex;justify-content:center;margin-top:20px"></div><div id="status"></div><div id="downloadArea" style="margin-top:15px"></div></div>
+</div>
+<script>
+const pdfjsLib=window['pdfjs-dist/build/pdf'];pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let originalBytes=null,selectedPage=null,generatedBlobUrl=null;
+document.getElementById('pdfFile').addEventListener('change',async e=>{
+  const buf=await e.target.files[0].arrayBuffer(); originalBytes=buf;
+  const copy=originalBytes.slice(0);
+  const doc=await pdfjsLib.getDocument({data:copy}).promise;
+  const c=document.getElementById('pages'); c.innerHTML='';
+  for(let i=1;i<=doc.numPages;i++){
+    const p=await doc.getPage(i); const v=p.getViewport({scale:0.25});
+    const d=document.createElement('div'); d.className='page-thumb';
+    const cv=document.createElement('canvas'); cv.width=v.width; cv.height=v.height;
+    await p.render({canvasContext:cv.getContext('2d'),viewport:v}).promise;
+    d.appendChild(cv); d.innerHTML+=`<div>Hoja ${i}</div>`;
+    d.onclick=()=>{selectedPage=i; document.querySelectorAll('.page-thumb').forEach(x=>x.classList.remove('selected')); d.classList.add('selected'); document.getElementById('selText').textContent=i; document.getElementById('actions').style.display='block';};
+    c.appendChild(d);
+  }
+});
+document.getElementById('genBtn').onclick=async()=>{
+  try{
+    const lib=await PDFLib.PDFDocument.load(originalBytes.slice(0));
+    const n=await PDFLib.PDFDocument.create(); const [cp]=await n.copyPages(lib,[selectedPage-1]); n.addPage(cp);
+    const bytes=await n.save(); const blob=new Blob([bytes],{type:'application/pdf'});
+    if(generatedBlobUrl) URL.revokeObjectURL(generatedBlobUrl); generatedBlobUrl=URL.createObjectURL(blob);
+    const base=document.getElementById('baseUrl').value.trim(); const fileName=`Hoja_${selectedPage}_${Date.now()}.pdf`;
+    const fullUrl=base+fileName;
+    document.getElementById('qr').innerHTML=''; new QRCode(document.getElementById('qr'),{text:fullUrl,width:240,height:240});
+    document.getElementById('status').innerHTML=`<b style="color:green">¡Listo!</b><br>QR apunta a:<br><code>${fullUrl}</code><br><br>1. Descarga el PDF con el botón verde<br>2. Súbelo a esa carpeta de tu GitHub Pages con ese mismo nombre<br>3. Al escanear el QR en el celular se descargará completo`;
+    document.getElementById('downloadArea').innerHTML=`<a href="${generatedBlobUrl}" download="${fileName}" style="background:#25D366;color:#000;padding:14px 24px;border-radius:8px;text-decoration:none;font-weight:800;display:inline-block">⬇️ DESCARGAR PDF DE ESA HOJA</a>`;
+  }catch(err){document.getElementById('status').textContent='Error: '+err.message;}
+};
+</script>
+</body>
+</html>
