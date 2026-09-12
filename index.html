@@ -3,20 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Don Platico - Cuenta a QR V6</title>
+<title>Don Platico - Cuenta a QR V7</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<style>body{font-family:Arial;background:#FBEBCB;padding:15px}.card{max-width:520px;margin:auto;background:#fff;padding:22px;border-radius:12px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.15)}button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:800;cursor:pointer;width:100%;margin-top:12px}#qr{display:flex;justify-content:center;margin-top:20px}textarea{width:100%;height:160px;margin-top:12px;font-size:13px;text-align:left;padding:8px}#status{margin-top:12px;font-size:13px;word-break:break-word}</style>
+<style>
+body{font-family:Arial;background:#FBEBCB;padding:15px;margin:0}
+.card{max-width:540px;margin:auto;background:#fff;padding:22px;border-radius:14px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,.2)}
+button{background:#181A2E;color:#FFA23A;padding:14px;border:none;border-radius:8px;font-weight:900;cursor:pointer;width:100%;margin-top:12px;font-size:14px}
+#qr{display:flex;justify-content:center;margin-top:20px;background:white;padding:10px;border-radius:8px}
+textarea{width:100%;height:180px;margin-top:12px;font-size:12px;text-align:left;padding:8px;box-sizing:border-box}
+#status{margin-top:12px;font-size:13px;text-align:left;white-space:pre-wrap}
+</style>
 </head>
 <body>
 <div class="card">
-<h2>🧾 Cuenta PDF → QR</h2>
-<p style="font-size:13px">Sube el PDF de la cuenta y genera el QR</p>
-<input type="file" id="pdfFile" accept="application/pdf">
+<h2>🧾 Don Platico - Cuenta a QR</h2>
+<p style="font-size:12px">Sube el PDF del recibo de Odoo POS (como el 6556)</p>
+<input type="file" id="pdfFile" accept="application/pdf" style="width:100%;padding:10px;border:2px dashed #B4332A;border-radius:8px">
 <button id="genBtn" style="display:none">GENERAR QR DE ESTA CUENTA</button>
-<textarea id="txtPreview" placeholder="Aquí se verá el contenido de la cuenta..."></textarea>
+<textarea id="txtPreview" placeholder="Aquí aparecerá: Mojarra frita, Subtotal, Total..."></textarea>
 <div id="qr"></div>
 <div id="status"></div>
+<button id="printBtn" style="display:none;background:#B4332A;color:white">IMPRIMIR QR PARA MESA</button>
 </div>
 <script>
 const pdfjsLib = window['pdfjs-dist/build/pdf'];
@@ -24,47 +32,41 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 let fullText = "";
 
 document.getElementById('pdfFile').addEventListener('change', async e=>{
-  try{
-    const file = e.target.files[0];
-    if(!file) return;
-    document.getElementById('status').innerHTML = "Leyendo PDF...";
-    const buf = await file.arrayBuffer();
-    const doc = await pdfjsLib.getDocument({data: buf}).promise;
-    let txtAll = "";
-    for(let i=1; i<=doc.numPages; i++){
-      const page = await doc.getPage(i);
-      const txt = await page.getTextContent();
-      const pageText = txt.items.map(o=>o.str).join(' ');
-      txtAll += pageText + "\n";
-    }
-    fullText = txtAll.trim();
-    console.log("TEXTO:", fullText);
-    document.getElementById('txtPreview').value = fullText;
-
-    if(fullText.length < 5){
-      document.getElementById('status').innerHTML = `<b style="color:red">Este PDF es una foto escaneada, no tiene texto.<br>Sube un PDF generado por el sistema de facturación, no una foto.</b>`;
-      document.getElementById('genBtn').style.display='none';
-      return;
-    }
-    document.getElementById('genBtn').style.display='block';
-    document.getElementById('status').innerHTML = `<span style="color:green">Texto leído: ${fullText.length} caracteres. Listo para generar QR.</span>`;
-  }catch(err){
-    document.getElementById('status').innerHTML = `<b style="color:red">Error leyendo PDF: ${err.message}</b>`;
-    console.error(err);
+  const file = e.target.files[0]; if(!file) return;
+  document.getElementById('status').textContent = "Leyendo recibo...";
+  const buf = await file.arrayBuffer();
+  const doc = await pdfjsLib.getDocument({data: buf}).promise;
+  let all = "";
+  for(let i=1;i<=doc.numPages;i++){
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    // Junta respetando saltos
+    let lastY = null;
+    content.items.forEach(item=>{
+      if(lastY!== item.transform[5]){ all += "\n"; lastY = item.transform[5]; }
+      all += item.str + " ";
+    });
   }
+  fullText = `RESTAURANTE DON PLATICO\n${all}\n\nCr 3 # 47-64 Cartagena\n`.replace(/\s+\n/g,'\n').trim();
+  document.getElementById('txtPreview').value = fullText;
+  document.getElementById('genBtn').style.display='block';
+  document.getElementById('status').innerHTML = `<span style="color:green">Recibo leído: ${fullText.length} caracteres</span>`;
 });
 
 document.getElementById('genBtn').onclick=()=>{
-  if(!fullText){ alert('No hay texto'); return; }
+  if(fullText.length < 10){ alert('Sube un PDF válido'); return; }
   document.getElementById('qr').innerHTML='';
   new QRCode(document.getElementById('qr'),{
     text: fullText,
-    width: 280,
-    height: 280,
-    correctLevel: QRCode.CorrectLevel.L
+    width: 300,
+    height: 300,
+    correctLevel: QRCode.CorrectLevel.M
   });
-  document.getElementById('status').innerHTML = `<b style="color:green">¡QR listo! El cliente verá:</b><br><div style="text-align:left;background:#f5f5f5;padding:8px;margin-top:8px;border-radius:6px">${fullText.substring(0,500)}</div>`;
+  document.getElementById('status').innerHTML = `✅ QR generado. Cuando el cliente escanee verá:\n${fullText}`;
+  document.getElementById('printBtn').style.display='block';
 };
+
+document.getElementById('printBtn').onclick=()=>{ window.print(); };
 </script>
 </body>
 </html>
